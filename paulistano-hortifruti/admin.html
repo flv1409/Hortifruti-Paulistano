@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Administrativo | Paulistano Hortifruti</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="icon" type="image/jpg" href="assets/logo.jpg">
+    <style>
+        :root { --primary: #1b4332; --accent: #2d6a4f; --gold: #ffb703; --danger: #e63946; }
+        body { font-family: 'Poppins', sans-serif; background: #f0f2f1; padding: 20px; }
+        .admin-container { max-width: 1000px; margin: 0 auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        h1 { color: var(--primary); border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 30px; }
+        
+        /* Painel de Promoções */
+        .promo-box { background: #fff8e1; border: 2px dashed var(--gold); padding: 20px; border-radius: 10px; margin-bottom: 40px; }
+        .promo-flex { display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; }
+        .form-group { display: flex; flex-direction: column; gap: 5px; }
+        input, select { padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        
+        /* Tabela de Preços */
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th { text-align: left; background: var(--primary); color: white; padding: 12px; }
+        td { padding: 12px; border-bottom: 1px solid #eee; }
+        .price-input { width: 80px; font-weight: bold; color: var(--accent); }
+        
+        .btn { border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: 600; transition: 0.3s; }
+        .btn-save { background: var(--primary); color: white; }
+        .btn-promo { background: var(--gold); color: var(--primary); }
+        .btn-remove { background: var(--danger); color: white; font-size: 0.8rem; }
+        
+        .badge-promo { background: var(--gold); color: var(--primary); padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 800; }
+    </style>
+</head>
+<body>
+
+<div class="admin-container">
+    <h1><i class="fas fa-cash-register"></i> Gestão de Preços e Ofertas</h1>
+
+    <!-- Módulo de Promoção -->
+    <div class="promo-box">
+        <h3><i class="fas fa-percentage"></i> Criar Promoção Relâmpago</h3>
+        <div class="promo-flex">
+            <div class="form-group">
+                <label>Produto</label>
+                <select id="promoProductSelect"></select>
+            </div>
+            <div class="form-group">
+                <label>Tipo</label>
+                <select id="promoType">
+                    <option value="fixed">Preço Fixo (R$)</option>
+                    <option value="percent">Desconto (%)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Valor</label>
+                <input type="number" id="promoValue" step="0.01" placeholder="Ex: 5.99 ou 20">
+            </div>
+            <button class="btn btn-promo" onclick="applyPromo()">Aplicar Oferta</button>
+        </div>
+    </div>
+
+    <!-- Tabela Geral -->
+    <h3>Lista de Produtos</h3>
+    <table id="adminTable">
+        <thead>
+            <tr>
+                <th>Produto</th>
+                <th>Preço Base</th>
+                <th>Status / Promoção</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody id="adminProductList"></tbody>
+    </table>
+</div>
+
+<script>
+    // Database Inicial (Caso não exista no LocalStorage)
+    const initialProducts = [
+        // VERDURAS
+            {id: 1, cat: "Verduras", name: "Agrião Maço", unit: "Maço 1un", price: 4.99, img: "verduras/agriao.jpg" },
+            {id: 2, cat: "Verduras", name: "Alecrim", unit: "Maço 1un", price: 2.99, img: "verduras/alecrim.jpg" },
+            {id: 3, cat: "Verduras", name: "Alface Americana", unit: "Embalagem 1un", price: 3.99, img: "verduras/alface.jpg" },
+            {id: 4, cat: "Verduras", name: "Alface Crespa", unit: "Unidade", price: 3.99, img: "verduras/alface_crespa.jpg" },
+            {id: 5, cat: "Verduras", name: "Alho Poró", unit: "Unidade", price: 4.99, img: "verduras/alho_poro.jpg" },
+            {id: 6, cat: "Verduras", name: "Brócolis Ninja", unit: "Maço 1un", price: 7.99, img: "verduras/brocolis.jpg" },
+            {id: 7, cat: "Verduras", name: "Coentro", unit: "Maço 1un", price: 2.99, img: "verduras/coentro.jpg" },
+            {id: 8, cat: "Verduras", name: "Couve Flor", unit: "Unidade", price: 9.99, img: "verduras/couve_flor.jpg" },
+            {id: 9, cat: "Verduras", name: "Couve Manteiga", unit: "Unidade", price: 3.99, img: "verduras/couve.jpg" },
+            {id: 10, cat: "Verduras", name: "Couve Picada", unit: "Bandeja", price: 5.99, img: "verduras/couve_picada.jpg" },
+            {id: 11, cat: "Verduras", name: "Escarola", unit: "Unidade", price: 3.99, img: "verduras/escarola.jpg" },
+            {id: 12, cat: "Verduras", name: "Folha de Louro", unit: "Maço", price: 3.49, img: "verduras/louro.jpg" },
+            {id: 13, cat: "Verduras", name: "Hortelã", unit: "Maço", price: 3.49, img: "verduras/hortela.jpg" },
+            {id: 14, cat: "Verduras", name: "Manjericão", unit: "Maço", price: 3.49, img: "verduras/manjericao.jpg" },
+            {id: 15, cat: "Verduras", name: "Repolho Verde", unit: "500g", price: 2.99, img: "verduras/repolho_v.jpg" },
+            {id: 16, cat: "Verduras", name: "Repolho Roxo", unit: "500g", price: 3.49, img: "verduras/repolho_r.jpg" },
+            {id: 17, cat: "Verduras", name: "Rúcula", unit: "Maço", price: 4.99, img: "verduras/rucula.jpg" },
+            {id: 18, cat: "Verduras", name: "Salsa", unit: "Unidade", price: 3.99, img: "verduras/salsa.jpg" },
+
+            // FRUTAS
+            {id: 19, cat: "Frutas", name: "Abacate", unit: "1 kg", price: 4.99, img: "frutas/abacate.jpg" },
+            {id: 20, cat: "Frutas", name: "Abacaxi Pérola", unit: "Unidade", price: 9.99, img: "frutas/abacaxi.jpg" },
+            {id: 21, cat: "Frutas", name: "Acerola", unit: "Bandeja", price: 11.99, img: "frutas/acerola.jpg" },
+            {id: 22, cat: "Frutas", name: "Ameixa Importada", unit: "500g", price: 7.99, img: "frutas/ameixa.jpg" },
+            {id: 23, cat: "Frutas", name: "Banana Nanica", unit: "500g", price: 2.49, img: "frutas/banana_n.jpg" },
+            {id: 24, cat: "Frutas", name: "Banana Prata", unit: "500g", price: 3.99, img: "frutas/banana_p.jpg" },
+            {id: 25, cat: "Frutas", name: "Banana da Terra", unit: "500g", price: 4.99, img: "frutas/banana_t.jpg" },
+            {id: 26, cat: "Frutas", name: "Caju", unit: "Bandeja", price: 14.99, img: "frutas/caju.jpg" },
+            {id: 27, cat: "Frutas", name: "Coco Verde", unit: "Unidade", price: 5.99, img: "frutas/coco_v.jpg" },
+            {id: 28, cat: "Frutas", name: "Goiaba Vermelha", unit: "500g", price: 2.49, img: "frutas/goiaba.jpg" },
+            {id: 29, cat: "Frutas", name: "Kiwi", unit: "500g", price: 13.99, img: "frutas/kiwi.jpg" },
+            {id: 30, cat: "Frutas", name: "Laranja Bahia", unit: "500g", price: 4.99, img: "frutas/laranja_b.jpg" },
+            {id: 31, cat: "Frutas", name: "Laranja Lima", unit: "500g", price: 3.99, img: "frutas/laranja_l.jpg" },
+            {id: 32, cat: "Frutas", name: "Laranja Pêra", unit: "500g", price: 1.99, img: "frutas/laranja_p.jpg" },
+            {id: 33, cat: "Frutas", name: "Limão Taiti", unit: "500g", price: 1.99, img: "frutas/limao_t.jpg" },
+            {id: 34, cat: "Frutas", name: "Maçã Gala", unit: "500g", price: 2.99, img: "frutas/maca_gala.jpg" },
+            {id: 35, cat: "Frutas", name: "Mamão Papaya", unit: "Unidade", price: 4.99, img: "frutas/mamao.jpg" },
+            {id: 36, cat: "Frutas", name: "Manga Palmer", unit: "500g", price: 3.49, img: "frutas/manga.jpg" },
+            {id: 37, cat: "Frutas", name: "Maracujá", unit: "500g", price: 4.99, img: "frutas/maracuja.jpg" },
+            {id: 38, cat: "Frutas", name: "Melancia Inteira", unit: "Unidade", price: 31.99, img: "frutas/melancia.jpg" },
+            {id: 39, cat: "Frutas", name: "Melão Amarelo", unit: "Unidade", price: 11.99, img: "frutas/melao.jpg" },
+            {id: 40, cat: "Frutas", name: "Morangos", unit: "Bandeja", price: 11.99, img: "frutas/morango.jpg" },
+            {id: 41, cat: "Frutas", name: "Uva Vitória", unit: "500g", price: 7.99, img: "frutas/uva.jpg" },
+
+            // LEGUMES
+            {id: 42, cat: "Legumes", name: "Abóbora Japonesa", unit: "500g", price: 1.99, img: "legumes/abobora.jpg" },
+            {id: 43, cat: "Legumes", name: "Alho Roxo", unit: "100g", price: 2.49, img: "legumes/alho.jpg" },
+            {id: 44, cat: "Legumes", name: "Batata Doce", unit: "500g", price: 2.99, img: "legumes/batata_doce.jpg" },
+            {id: 45, cat: "Legumes", name: "Batata Lavada", unit: "500g", price: 4.99, img: "legumes/batata.jpg" },
+            {id: 46, cat: "Legumes", name: "Berinjela", unit: "500g", price: 3.99, img: "legumes/berinjela.jpg" },
+            {id: 47, cat: "Legumes", name: "Beterraba", unit: "500g", price: 3.49, img: "legumes/beterraba.jpg" },
+            {id: 48, cat: "Legumes", name: "Cebola Nacional", unit: "500g", price: 2.49, img: "legumes/cebola.jpg" },
+            {id: 49, cat: "Legumes", name: "Cenoura", unit: "500g", price: 3.99, img: "legumes/cenoura.jpg" },
+            {id: 50, cat: "Legumes", name: "Chuchu", unit: "500g", price: 2.49, img: "legumes/chuchu.jpg" },
+            {id: 51, cat: "Legumes", name: "Mandioca", unit: "500g", price: 1.99, img: "legumes/mandioca.jpg" },
+            {id: 52, cat: "Legumes", name: "Pepino Japonês", unit: "500g", price: 4.99, img: "legumes/pepino.jpg" },
+            {id: 53, cat: "Legumes", name: "Tomate Italiano", unit: "500g", price: 6.49, img: "legumes/tomate.jpg" },
+
+            // PEIXARIA
+            {id: 54, cat: "Peixaria", name: "Filé de Tilápia", unit: "500g", price: 29.99, img: "peixaria/tilapia.jpg" },
+            {id: 55, cat: "Peixaria", name: "Camarão s/ Cabeça", unit: "500g", price: 34.99, img: "peixaria/camarao.jpg" },
+            {id: 56, cat: "Peixaria", name: "Sardinha Limpa", unit: "500g", price: 5.99, img: "peixaria/sardinha.jpg" },
+            {id: 57, cat: "Peixaria", name: "Cação em Postas", unit: "500g", price: 19.99, img: "peixaria/cacao.jpg" },
+
+            // CASA DO NORTE
+            {id: 58, cat: "Casa do Norte", name: "Tapioca", unit: "1 kg", price: 10.99, img: "casa_norte/tapioca.jpg" },
+            {id: 59, cat: "Casa do Norte", name: "Feijão de Corda", unit: "500g", price: 7.49, img: "casa_norte/feijao_corda.jpg" },
+            {id: 60, cat: "Casa do Norte", name: "Azeite de Dendê", unit: "Unidade", price: 6.49, img: "casa_norte/dende.jpg" },
+            {id: 61, cat: "Casa do Norte", name: "Cuscuz Flocão", unit: "Unidade", price: 4.99, img: "casa_norte/flocao.jpg" },
+            {id: 62, cat: "Casa do Norte", name: "Carne Seca (Jabá)", unit: "400g", price: 22.99, img: "casa_norte/jaba.jpg" },
+
+            // OVOS
+            {id: 63, cat: "Ovos", name: "Ovos Brancos", unit: "12 unidades", price: 10.99, img: "ovos/ovos.jpg" },
+            {id: 64, cat: "Ovos", name: "Ovo Branco Cartela", unit: "20 unidades", price: 14.99, img: "ovos/ovos_20.jpg" },
+            {id: 65, cat: "Ovos", name: "Ovo Caipira", unit: "10 unidades", price: 12.99, img: "ovos/ovos_caipira.jpg" }
+        ];
+
+    let products = JSON.parse(localStorage.getItem('hortifruti_db')) || initialProducts;
+
+    function save() {
+        localStorage.setItem('hortifruti_db', JSON.stringify(products));
+        render();
+    }
+
+    function render() {
+        const list = document.getElementById('adminProductList');
+        const select = document.getElementById('promoProductSelect');
+        
+        list.innerHTML = '';
+        select.innerHTML = '';
+
+        products.forEach(p => {
+            // Render Table
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${p.name} <br><small>${p.unit}</small></td>
+                <td>R$ <input type="number" step="0.01" class="price-input" value="${p.price}" onchange="updateBasePrice(${p.id}, this.value)"></td>
+                <td>
+                    ${p.promoPrice ? `<span class="badge-promo">OFERTA: R$ ${p.promoPrice.toFixed(2)}</span>` : '<small>Preço Normal</small>'}
+                </td>
+                <td>
+                    ${p.promoPrice ? `<button class="btn btn-remove" onclick="removePromo(${p.id})">Remover Promo</button>` : ''}
+                </td>
+            `;
+            list.appendChild(row);
+
+            // Render Select
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = p.name;
+            select.appendChild(opt);
+        });
+    }
+
+    function updateBasePrice(id, value) {
+        const idx = products.findIndex(p => p.id === id);
+        products[idx].price = parseFloat(value);
+        save();
+    }
+
+    function applyPromo() {
+        const id = parseInt(document.getElementById('promoProductSelect').value);
+        const type = document.getElementById('promoType').value;
+        const val = parseFloat(document.getElementById('promoValue').value);
+        const idx = products.findIndex(p => p.id === id);
+
+        if(isNaN(val)) return alert("Insira um valor válido");
+
+        if(type === 'fixed') {
+            products[idx].promoPrice = val;
+        } else {
+            products[idx].promoPrice = products[idx].price * (1 - val/100);
+        }
+        
+        save();
+        document.getElementById('promoValue').value = '';
+    }
+
+    function removePromo(id) {
+        const idx = products.findIndex(p => p.id === id);
+        products[idx].promoPrice = null;
+        save();
+    }
+
+    render();
+</script>
+</body>
+</html>
